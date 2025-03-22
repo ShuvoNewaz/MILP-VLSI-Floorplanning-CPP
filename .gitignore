@@ -1,7 +1,9 @@
-results
+results/*
+!results/5_block_floorplan.png
 spec_files/successive_augmentation
 lp_solve_files
 .vscode
 main.sh
 main.out
 VLSI.ptf
+readme.ipynb
