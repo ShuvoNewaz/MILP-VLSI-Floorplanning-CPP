@@ -4,11 +4,33 @@ NOTE: This repository uses the MOSEK library in C++ to solve the problem. Click 
 
 This repository is for the Linux operating system and is based on C++11. The visualization uses the [matplotlib](https://matplotlib.org/) library with Python. To use this repository, please follow these steps:
 
-- Clone this repository or download as a zip.
+- Open terminal in your preferred work directory and enter the following commands:
+
+    `git clone https://github.com/ShuvoNewaz/MILP-VLSI-Floorplanning-CPP`
+
+    `cd MILP-VLSI-Floorplanning-CPP`
+- Make sure your system has [Anaconda](https://www.anaconda.com/download) installed. Enter the following command:
+
+    `conda env create -f environment.yml`
+
+This will create a conda environment with the required libraries. The environment is needed for visualization using [Matplotlib](https://matplotlib.org/).
 - This project makes use of an LP-solver named MOSEK. The tool can be downloaded and the license can be obtained from [MOSEK's website](https://www.mosek.com/resources/getting-started/). Once registered, follow the instructions regarding the directory setup for MOSEK in the email. In particular, pay attention to the directory where the license file is kept.
+- The environment is now ready. Activate the environment by typing
+
+    `conda activate MILP_Floorplan_CPP`
 - The setup for the MOSEK libraries and header files are dependent on the operating system. For instance, g++ may not be used with Windows to run MOSEK. Please check their website to confirm compatibility. The [run_template.sh](run_template.sh) outlines the template paths for the required header files and libraries.
 - The input arguments such as the number of blocks of the system, whether or not successive augmentation is applied, etc. are very similar to the Python version. Edit the [run_template.sh](run_template.sh) file to run as required.
 - After setting up the arguments as needed, run `bash run_template.sh` in your terminal.
+
+A trial run can be performed by modifying the `bash run_template.sh` as follows:
+
+  `./main.out 30 true true 15 true 7 true`
+
+The command above takes the file with 30 modules and runs a successive augmentation technique for faster optimization. Each superblock contains 7 modules (if remaining number of modules is greater than 7). The superblocks are given 15 seconds to optimize, and the superblock is visulized after optimized. The final floorplan created using the superblocks is also visualized and the dimensions are stored. It also generates a *.lp formatted file which can be used with the [LPSolve tool](https://sourceforge.net/projects/lpsolve/) to optimize.
+
+**Warning**: While doing successive augmentation, make sure the last superblock contains more than 1 module. For example, do not do successive augmentation on the 50-block system with a superblock size of 7.
+
+**Note**: the LPSolve tool takes forever to optimize a 30-module system. Try with a 5 or 10-module system first.
 
 ## Assumptions
 

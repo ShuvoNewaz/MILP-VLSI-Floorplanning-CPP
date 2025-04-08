@@ -2,6 +2,9 @@
 #include <fstream>
 #include <vector>
 #include <math.h>
+// #include "generate/total_modules.h"
+// #include "generate/hard_module_dimension.h"
+// #include "generate/soft_module_properties.h"
 
 using namespace std;
 
@@ -12,10 +15,9 @@ int minimum(int a, int b)
 
 class Augment
 {
-    public:
-        
-        bool hard_exists, soft_exists;
-        unsigned short int num_hard_modules, num_soft_modules;
+    public:        
+        unsigned short int num_hard_modules, num_soft_modules, num_total_modules;
+        vector<float> hard_module_width, hard_module_height, area, min_aspect, max_aspect;
         string file, spec_file;
         string spec_files_dir, sa_files_dir, sa_file_prefix;
         int num_blocks;
@@ -23,122 +25,8 @@ class Augment
 
         Augment(string);
 
-        tuple<int, int> total_modules()
-        {
-            for(string line : lines)
-            {
-                if(line.substr(0, 4) == "hard")
-                {
-                    hard_exists = true;
-                    num_hard_modules = stoi(line.substr(7, line.size() - 7));
-                }
-                else if(line.substr(0, 4) == "soft")
-                {
-                    soft_exists = true;
-                    num_soft_modules = stoi(line.substr(7, line.size() - 7));
-                }
-                else if(hard_exists && !soft_exists)
-                {
-                    num_soft_modules = 0;
-                }
-                else if(!hard_exists && soft_exists)
-                {
-                    num_hard_modules = 0;
-                }
-            }
-
-            return make_tuple(num_hard_modules, num_soft_modules);
-        }
-
-        tuple<vector<float>, vector<float>> hard_module_dimension()
-        {
-            tuple<vector<float>, vector<float>> hard_dimension;
-            if (hard_exists)
-            {
-                unsigned short int i = 0;
-
-                for(string line : lines)
-                {
-                    if(line.substr(0, 4) == "hard")
-                    {
-                        continue;
-                    }
-                    
-                    unsigned short int comma_index = line.find(",");
-                    float width, height;
-                    width = stof(line.substr(0, comma_index+1));
-                    height = stof(line.substr(comma_index+1, line.size()-comma_index));
-                    get<0>(hard_dimension).push_back(width);
-                    get<1>(hard_dimension).push_back(height);
-                    i += 1;
-                    if(i >= num_hard_modules)
-                    {
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                get<0>(hard_dimension).push_back(0);
-                get<1>(hard_dimension).push_back(0);;
-            }
-
-            return hard_dimension;
-        }
-
-        tuple<vector<float>, vector<float>, vector<float>> soft_module_properties()
-        {
-            bool soft_encountered {false};
-            tuple<vector<float>, vector<float>, vector<float>> soft_properties;
-            if (num_soft_modules != 0)
-            {
-                unsigned short int i = 0;
-                for(string line : lines)
-                {
-                    if(line.substr(0, 4) == "soft")
-                    {
-                        soft_encountered = true;
-                        continue;
-                    }
-                    if(soft_encountered)
-                    {
-                        unsigned short int comma_index_1 = line.find(",");
-                        unsigned short int comma_index_2 = line.rfind(",");
-                        float area, min_aspect, max_aspect;
-                        area = stof(line.substr(0, comma_index_1+1));
-                        min_aspect = stof(line.substr(comma_index_1+1, comma_index_2-comma_index_1));
-                        max_aspect = stof(line.substr(comma_index_2+1, line.size()-comma_index_2));
-                        get<0>(soft_properties).push_back(area);
-                        get<1>(soft_properties).push_back(min_aspect);
-                        get<2>(soft_properties).push_back(max_aspect);
-                        i += 1;
-                        if(i >= num_soft_modules)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                get<0>(soft_properties).push_back(0);
-                get<1>(soft_properties).push_back(0);
-                get<2>(soft_properties).push_back(0);
-            }
-
-            return soft_properties;
-        }
-
         void break_problem(int sub_block_size)
         {
-            unsigned short int num_total_modules;
-            vector<float> hard_module_width, hard_module_height, area, min_aspect, max_aspect;
-
-            tie(num_hard_modules, num_soft_modules) = total_modules();
-            num_total_modules = num_hard_modules + num_soft_modules;
-            tie(hard_module_width, hard_module_height) = hard_module_dimension();
-            tie(area, min_aspect, max_aspect) = soft_module_properties();
-
             if(num_total_modules > sub_block_size)
             {
                 unsigned short int soft_count {0}, i, j, k, num_subblocks, modules_in_subblock, soft_left;
@@ -225,7 +113,6 @@ Augment::Augment(string fname)
     spec_files_dir = "spec_files";
     sa_files_dir = spec_files_dir + "/successive_augmentation";
     sa_file_prefix = sa_files_dir + "/" + to_string(num_blocks);
-    // system("mkdir " + sa_files_dir + " -p");
     spec_file = spec_files_dir + "/" + file;
 
     ifstream f; // Read file contents into f
@@ -239,4 +126,8 @@ Augment::Augment(string fname)
         }
         f.close();
     }
+    tie(num_hard_modules, num_soft_modules) = total_modules(lines);
+    num_total_modules = num_hard_modules + num_soft_modules;
+    tie(hard_module_width, hard_module_height) = hard_module_dimension(lines, num_hard_modules);
+    tie(area, min_aspect, max_aspect) = soft_module_properties(lines, num_soft_modules);
 }
