@@ -32,10 +32,6 @@ The command above takes the file with 30 modules and runs a successive augmentat
 
 **Note**: the LPSolve tool takes forever to optimize a 30-module system. Try with a 5 or 10-module system first.
 
-## Assumptions
-
-This model assumes that the optimized floorplan has a square shape. Because of this, the effective utilization is lower in certain cases. Try running the [10-block system](spec_files/10_block.ilp) with a sub-block size of 6 with successive augmentation to illustrate this effect in the final floorplan. The constraints would have to be modified to mitigate this, which is beyond the scope of this work.
-
 ## Overview
 
 ### Objective
@@ -103,7 +99,7 @@ $$y_i - m_j w_j + c_j \ge y_j - M (2 - x_{ij} - y_{ij})$$
 
 ### Integer Constraints
 
-$z$ determines hard module rotation and $x_{ij}, y_{ij}$ determines if modules $i$ and $j$ are physically connected.
+$z$ determines hard module rotation and $x_{ij}, y_{ij}$ determine the relative position of module $j$ with respect to module $i$. For example, $x_{ij}=1$ means module $j$ is to the right of module $i$.
 
 $$z_i=[0,1]$$
 $$x_{ij}=[0,1]$$

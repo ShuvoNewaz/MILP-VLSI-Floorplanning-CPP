@@ -54,11 +54,19 @@ int main(int argc, char *argv[])
             src_file_path = sa_files_dir + to_string(num_blocks) + "_" + to_string(i) + ".ilp";
             SolveILP problem = SolveILP(src_file_path, underestimation, false);
             vector<float>x_i, y_i, z_i, w_i, h_i;
-            float Y;
+            float Y, chip_width, chip_height;
             tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime, true);
             final_dimensions.push_back(Y);
+            chip_width = problem.get_chip_dimension(x_i, problem.hard_module_width,
+                                                    problem.hard_module_height,
+                                                    w_i, z_i);
+            chip_height = problem.get_chip_dimension(y_i, problem.hard_module_height,
+                                                    problem.hard_module_width,
+                                                    h_i, z_i);
+            // cout << Y << ' ' << chip_width << endl;
             string output_file_name = result_dir + to_string(num_blocks) + "_" + to_string(i) + ".txt";
-            utilization = problem.export_results(Y, x_i, y_i, z_i, w_i, h_i, {1}, output_file_name);
+            utilization = problem.export_results(chip_height, chip_width, x_i, y_i, z_i, w_i, h_i,
+                                                {1}, output_file_name);
             utilizations.push_back(utilization);
 
             system(("python src/visualize.py -f " + output_file_name + " --glob False --sa " + printBool(successive_augmentation) + " -idx " + to_string(i) + " -show True").c_str()); // Call visualize.py
@@ -79,10 +87,17 @@ int main(int argc, char *argv[])
 
     SolveILP problem = SolveILP(src_file_path, underestimation, save_lp);
     vector<float>x_i, y_i, z_i, w_i, h_i;
-    float Y;
+    float Y, chip_width, chip_height;
     tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime, false);
+    chip_width = problem.get_chip_dimension(x_i, problem.hard_module_width,
+                                            problem.hard_module_height,
+                                            w_i, z_i);
+    chip_height = problem.get_chip_dimension(y_i, problem.hard_module_height,
+                                            problem.hard_module_width,
+                                            h_i, z_i);
     string output_file_name = result_dir + to_string(num_blocks) + "_sa_" + printBool(successive_augmentation) + ".txt";
-    utilization = problem.export_results(Y, x_i, y_i, z_i, w_i, h_i, utilizations, output_file_name);
+    utilization = problem.export_results(chip_height, chip_width, x_i, y_i, z_i, w_i, h_i,
+                                        utilizations, output_file_name);
     cout << "Utilization: " << 100 * utilization << '%' << endl;
     system(("python src/visualize.py -f " + output_file_name + " --glob True --sa " + printBool(successive_augmentation) + " -show True").c_str()); // Call visualize.py
         

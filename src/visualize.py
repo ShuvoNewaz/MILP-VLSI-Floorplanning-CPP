@@ -43,7 +43,9 @@ def visualize(file):
     H = str2float(values[5])
     Z = str2float(values[6])
     utilization = str2float(values[7])[0]
-    bound = str2float(values[8])[0]
+    chip_height = str2float(values[8])[0]
+    chip_width = str2float(values[9])[0]
+    chip_area = chip_height * chip_width
     
     label = np.arange(num_total_modules) + 1
     plt.ion()
@@ -51,27 +53,24 @@ def visualize(file):
     for i, txt in enumerate(label):
         if i < num_hard_modules:
             if Z[i] >= 0.9: # Sometimes get 1.01/0.99
-                ax.add_patch(Rectangle((X[i], Y[i]), H[i], W[i], color='red'))
-                ax.add_patch(Rectangle((X[i], Y[i]), H[i], W[i], color='black', fill=False))
-                ax.annotate(text=txt, xy=(X[i], Y[i]), xytext=(X[i]+H[i]/2, Y[i]+W[i]/2))
+                H[i], W[i] = W[i], H[i]
+                ax.add_patch(Rectangle((X[i], Y[i]), W[i], H[i], color='red'))
             else:
                 ax.add_patch(Rectangle((X[i], Y[i]), W[i], H[i], color='green'))
-                ax.add_patch(Rectangle((X[i], Y[i]), W[i], H[i], color='black', fill=False))
-                ax.annotate(text=txt, xy=(X[i], Y[i]), xytext=(X[i]+W[i]/2, Y[i]+H[i]/2))
         else:
             ax.add_patch(Rectangle((X[i], Y[i]), W[i], H[i], color='yellow'))
-            ax.add_patch(Rectangle((X[i], Y[i]), W[i], H[i], color='black', fill=False))
-            ax.annotate(text=txt, xy=(X[i], Y[i]), xytext=(X[i]+W[i]/2, Y[i]+H[i]/2))
+        ax.add_patch(Rectangle((X[i], Y[i]), W[i], H[i], color='black', fill=False))
+        ax.annotate(text=txt, xy=(X[i], Y[i]), xytext=(X[i]+W[i]/2, Y[i]+H[i]/2))
         if sa==True:
             if glob==False:
-                    plt.title('Local floorplan for %d-th sub-block: Chip Height = %.4f, Chip Area = %d\nUtilization = %.2f percent' % (idx, bound, bound**2, utilization * 100))
+                    plt.title('Local floorplan for %d-th sub-block: Chip Height = %.4f, Chip Area = %d\nUtilization = %.2f percent' % (idx, chip_height, chip_area, utilization * 100))
             else:
-                    plt.title('Global floorplan for including all sub-blocks: Chip Height = %.4f, Chip Area = %d\nUtilization = %.2f percent' % (bound, bound**2, utilization * 100))
+                    plt.title('Global floorplan for including all sub-blocks: Chip Height = %.4f, Chip Area = %d\nUtilization = %.2f percent' % (chip_height, chip_area, utilization * 100))
         else:
-            plt.title('Direct floorplan: Chip Height = %.4f, Chip Area = %d\nUtilization = %.2f percent' % (bound, bound**2, utilization * 100))
+            plt.title('Direct floorplan: Chip Height = %.4f, Chip Area = %d\nUtilization = %.2f percent' % (chip_height, chip_area, utilization * 100))
 
-    ax.set_xlim(0, bound)
-    ax.set_ylim(0, bound)
+    ax.set_xlim(0, chip_width)
+    ax.set_ylim(0, chip_height)
     if show_layout:
         plt.show(block=True)
     else:

@@ -4,6 +4,7 @@
 #include "hard_soft_nonoverlap.h"
 #include "soft_soft_nonoverlap.h"
 #include "other_constraints.h"
+#include <algorithm>
 
 using namespace mosek::fusion;
 using namespace monty;
@@ -175,10 +176,61 @@ class SolveILP
             
             Y = (*sol)[total_variables - 1];
 
+            // Shift modules if doesn't start from 0
+            float min_x{Y}, min_y{Y};
+            min_x = *std::min_element(x_i.begin(), x_i.end());
+            min_y = *std::min_element(y_i.begin(), y_i.end());
+            for(size_t i = 0; i < x_i.size(); i++)
+            {
+                x_i[i] = x_i[i] - min_x;
+                y_i[i] = y_i[i] - min_y;
+            }
+
             return make_tuple(Y, x_i, y_i, z_i, w_i, h_i);
         }
 
-        float export_results(float Y, vector<float> x_i, vector<float>y_i, vector<float> z_i, vector<float> w_i, vector<float> h_i, vector<float> utilizations, string output_file_name)
+        float get_chip_dimension(vector<float> coordinate,
+                                vector<float> hard_dim1,
+                                vector<float> hard_dim2,
+                                vector<float> soft_dim,
+                                vector<float> z)
+        /*
+        hard_dim1 is hard_module_width and hard_dim2 is hard_module_height for
+        width computation. Opposite for height computation.
+
+        soft_dim is soft width for width computation, soft height for height computation.
+        */
+        {
+            float chip_dimension{0.0}, module_dimension;
+            for(size_t i = 0; i < num_total_modules; i++)
+            {
+                if(i < num_hard_modules)
+                {
+                    module_dimension = hard_dim1[i];
+                    if(z[i] == 1) // Rotated module
+                    {
+                        module_dimension = hard_dim2[i];
+                    }
+                }
+                else
+                {
+                    module_dimension = soft_dim[i - num_hard_modules];
+                }
+                chip_dimension = max(coordinate[i] + module_dimension, chip_dimension);
+            }
+
+            return chip_dimension;
+        }
+
+        float export_results(float chip_height,
+                            float chip_width,
+                            vector<float> x_i,
+                            vector<float>y_i,
+                            vector<float> z_i,
+                            vector<float> w_i,
+                            vector<float> h_i,
+                            vector<float> utilizations,
+                            string output_file_name)
         /*
             Exports the dimensions and coordinates of the optimized blocks to a text file. The results can
             later be read and plotted using Python.
@@ -186,26 +238,26 @@ class SolveILP
         {
             unsigned short int i;
             vector<float> W, H;
-            float utilization = 0;
+            float utilization{0};
 
-            for(i=0; i<num_hard_modules; i++)
+            for(i = 0; i < num_hard_modules; i++)
             {
                 W.push_back(hard_module_width[i]);
                 H.push_back(hard_module_height[i]);
                 utilization += W[i] * H[i];
             }
-            for(i=0; i<num_soft_modules; i++)
+            for(i = 0; i < num_soft_modules; i++)
             {
                 W.push_back(w_i[i]);
                 H.push_back(h_i[i]);
                 utilization += W[i+num_hard_modules] * H[i+num_hard_modules];
             }
-            for(i=0; i<utilizations.size(); i++)
+            for(i = 0; i < utilizations.size(); i++)
             {
                 utilization *= utilizations[i];
             }
             
-            float chip_area = pow(Y, 2);
+            float chip_area = chip_height * chip_width;
             utilization = (utilization / chip_area);
 
             ofstream output_file;
@@ -227,7 +279,8 @@ class SolveILP
                     output_file << "0\n";
                 }
                 output_file << to_string(utilization) + "\n";
-                output_file << to_string(Y) + "\n";
+                output_file << to_string(chip_height) + "\n";
+                output_file << to_string(chip_width) + "\n";
             }
             
             output_file.close();
