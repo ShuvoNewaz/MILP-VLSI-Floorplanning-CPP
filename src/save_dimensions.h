@@ -12,13 +12,6 @@ void writeHard(string file_name, int num_augmentations)
     f.close();
 }
 
-// void save_augmented_dimensions(string file_name)
-// {
-//     ofstream f(file_name);
-//     f << "hard - " ;
-//     f.close();
-// }
-
 void save_augmented_dimensions(string file_name, vector<float> bounds)
 {
     ofstream f;

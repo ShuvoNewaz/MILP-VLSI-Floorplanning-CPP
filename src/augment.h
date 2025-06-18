@@ -2,9 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <math.h>
-// #include "generate/total_modules.h"
-// #include "generate/hard_module_dimension.h"
-// #include "generate/soft_module_properties.h"
+#include <string>
 
 using namespace std;
 

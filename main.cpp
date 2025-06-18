@@ -1,26 +1,13 @@
-#include "src/solve/solve.h"
-#include "src/augment.h"
-#include"src/save_dimensions.h"
+#include "src/solve/build_pipeline.h"
+#include "src/multi_threading.h"
 
-string printBool(bool Bool)
-{
-    string out;
-    if (Bool) {out = "True";}
-    else {out = "False";}
-    return out;
-}
-
-bool parseBool(string Bool)
-{
-    return (Bool == "true" || Bool == "True");
-}
 
 int main(int argc, char *argv[])
 {
     int num_blocks{stoi(argv[1])}, sub_block_size{stoi(argv[6])}, num_augmentations, i;
     bool underestimation{parseBool(argv[2])}, successive_augmentation{parseBool(argv[3])},
     visualize_superblock{parseBool(argv[5])}, save_lp{parseBool(argv[7])};
-    float runtime{2};
+    float runtime{stof(argv[4])};
     string src_file_path;
     string spec_files_dir = "spec_files/";
     string result_dir = "results/" + to_string(num_blocks) + "/";
@@ -30,7 +17,7 @@ int main(int argc, char *argv[])
     system(("mkdir -p " + result_dir).c_str());
 
     vector<float> utilizations;
-    float utilization;
+    float utilization, Y;
     if(successive_augmentation)
     {   
         if(sub_block_size > num_blocks)
@@ -48,29 +35,36 @@ int main(int argc, char *argv[])
         Augment aug = Augment(file);
         aug.break_problem(sub_block_size);
         
-        for(i=1; i<num_augmentations+1; i++)
-        {
-            cout << "\nOptimizing sub block " << to_string(i) << endl;
-            src_file_path = sa_files_dir + to_string(num_blocks) + "_" + to_string(i) + ".ilp";
-            SolveILP problem = SolveILP(src_file_path, underestimation, false);
-            vector<float>x_i, y_i, z_i, w_i, h_i;
-            float Y, chip_width, chip_height;
-            tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime, true);
-            final_dimensions.push_back(Y);
-            chip_width = problem.get_chip_dimension(x_i, problem.hard_module_width,
-                                                    problem.hard_module_height,
-                                                    w_i, z_i);
-            chip_height = problem.get_chip_dimension(y_i, problem.hard_module_height,
-                                                    problem.hard_module_width,
-                                                    h_i, z_i);
-            // cout << Y << ' ' << chip_width << endl;
-            string output_file_name = result_dir + to_string(num_blocks) + "_" + to_string(i) + ".txt";
-            utilization = problem.export_results(chip_height, chip_width, x_i, y_i, z_i, w_i, h_i,
-                                                {1}, output_file_name);
-            utilizations.push_back(utilization);
+        // Begin multi-threading
+        ThreadPool pool(std::thread::hardware_concurrency());  // Use all cores
 
-            system(("python src/visualize.py -f " + output_file_name + " --glob False --sa " + printBool(successive_augmentation) + " -idx " + to_string(i) + " -show True").c_str()); // Call visualize.py
+        std::vector<std::future<tuple<float, float>>> futures;
+
+        for (int i = 1; i <= num_augmentations; i++) {
+            // Important: customize result_dir to avoid file I/O clashes!
+            futures.emplace_back(
+                pool.submit(mainProcess,
+                            std::ref(num_blocks),
+                            std::ref(underestimation),
+                            false,
+                            std::ref(successive_augmentation),
+                            std::ref(runtime),
+                            std::ref(result_dir),
+                            std::vector<float>{1.0f},
+                            false,
+                            i)
+            );
+            
         }
+
+        for (auto& fut : futures)
+        {
+            std::tie(utilization, Y) = fut.get();  // blocks if not ready
+            utilizations.push_back(utilization);
+            final_dimensions.push_back(Y);
+        }
+        // End multi-threading
+
         src_file_path = sa_files_dir + to_string(num_blocks) + "_sa.ilp";
         writeHard(src_file_path, num_augmentations);
         save_augmented_dimensions(src_file_path, final_dimensions);
@@ -83,23 +77,12 @@ int main(int argc, char *argv[])
 
     // Optimize and plot final floorplan
 
-    cout << "\nFinal Optimization\n";
-
-    SolveILP problem = SolveILP(src_file_path, underestimation, save_lp);
-    vector<float>x_i, y_i, z_i, w_i, h_i;
-    float Y, chip_width, chip_height;
-    tie(Y, x_i, y_i, z_i, w_i, h_i) = problem.solve(runtime, false);
-    chip_width = problem.get_chip_dimension(x_i, problem.hard_module_width,
-                                            problem.hard_module_height,
-                                            w_i, z_i);
-    chip_height = problem.get_chip_dimension(y_i, problem.hard_module_height,
-                                            problem.hard_module_width,
-                                            h_i, z_i);
-    string output_file_name = result_dir + to_string(num_blocks) + "_sa_" + printBool(successive_augmentation) + ".txt";
-    utilization = problem.export_results(chip_height, chip_width, x_i, y_i, z_i, w_i, h_i,
-                                        utilizations, output_file_name);
+    tie(utilization, Y) = mainProcess(num_blocks,
+                                    underestimation, save_lp,
+                                    successive_augmentation,
+                                    runtime, result_dir,
+                                    utilizations, true);
     cout << "Utilization: " << 100 * utilization << '%' << endl;
-    system(("python src/visualize.py -f " + output_file_name + " --glob True --sa " + printBool(successive_augmentation) + " -show True").c_str()); // Call visualize.py
         
     return 0;
 }

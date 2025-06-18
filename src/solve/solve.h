@@ -100,7 +100,7 @@ class SolveILP
                             M, X);
         }
 
-        tuple<float, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>> solve(float run_time, bool sub_module)
+        tuple<float, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>> solve(float run_time)
         {
             vector<float> x_i, y_i, w_i, h_i, z_i;
             float Y;           
