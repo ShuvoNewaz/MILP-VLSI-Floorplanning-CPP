@@ -2,7 +2,7 @@
 
 NOTE: This repository uses the MOSEK library in C++ to solve the problem. Click [here](https://github.com/ShuvoNewaz/MILP-VLSI-Floorplanning-Python/) to view the repository in Python. Aside from the major programming language used, the 2 repositories are identical for all intents and purposes.
 
-This repository is for the Linux operating system and is based on C++20. The visualization uses the [matplotlib](https://matplotlib.org/) library with Python. To use this repository, please follow these steps:
+This repository is developed in Ubuntu 22 and is based on C++20. The visualization uses the [matplotlib](https://matplotlib.org/) library with Python. To use this repository, please follow these steps:
 
 - Open terminal in your preferred work directory and enter the following commands:
 

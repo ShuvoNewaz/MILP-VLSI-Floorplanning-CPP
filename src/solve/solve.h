@@ -238,27 +238,31 @@ class SolveILP
         {
             unsigned short int i;
             vector<float> W, H;
-            float utilization{0};
+            float utilization, used_area{0};
+
+            /* Final Utilization = 
+                (sum_i^num_superblock (utilization * superblock area)) / final_chip_area
+            */
 
             for(i = 0; i < num_hard_modules; i++)
             {
                 W.push_back(hard_module_width[i]);
                 H.push_back(hard_module_height[i]);
-                utilization += W[i] * H[i];
+                used_area += utilizations[i] * W[i] * H[i];
             }
             for(i = 0; i < num_soft_modules; i++)
             {
                 W.push_back(w_i[i]);
                 H.push_back(h_i[i]);
-                utilization += W[i+num_hard_modules] * H[i+num_hard_modules];
-            }
-            for(i = 0; i < utilizations.size(); i++)
-            {
-                utilization *= utilizations[i];
+                used_area += utilizations[i + num_hard_modules] *
+                                W[i + num_hard_modules] *
+                                H[i + num_hard_modules];
             }
             
             float chip_area = chip_height * chip_width;
-            utilization = (utilization / chip_area);
+            utilization = used_area / chip_area;
+
+            // Write outputs to a file
 
             ofstream output_file;
             output_file.open(output_file_name, ios::out);

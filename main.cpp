@@ -39,9 +39,16 @@ int main(int argc, char *argv[])
         ThreadPool pool(std::thread::hardware_concurrency());  // Use all cores
 
         std::vector<std::future<tuple<float, float>>> futures;
-
+        
+        int remaining_blocks = num_blocks;
         for (int i = 1; i <= num_augmentations; i++) {
-            // Important: customize result_dir to avoid file I/O clashes!
+            sub_block_size = min(sub_block_size, remaining_blocks);
+            remaining_blocks -= sub_block_size;
+            utilizations = {};
+            for(int j = 0; j < sub_block_size; j++)
+            {
+                utilizations.push_back(1.0f); // Primary blocks are fully used
+            }
             futures.emplace_back(
                 pool.submit(mainProcess,
                             std::ref(num_blocks),
@@ -50,17 +57,15 @@ int main(int argc, char *argv[])
                             std::ref(successive_augmentation),
                             std::ref(runtime),
                             std::ref(result_dir),
-                            std::vector<float>{1.0f},
-                            false,
-                            i)
+                            utilizations, false, i)
             );
-            
         }
-
+        
+        utilizations = {}; // Reset for final layout
         for (auto& fut : futures)
         {
-            std::tie(utilization, Y) = fut.get();  // blocks if not ready
-            utilizations.push_back(utilization);
+            std::tie(utilization, Y) = fut.get(); // blocks if not ready
+            utilizations.push_back(utilization); // Superblocks are under-utilized
             final_dimensions.push_back(Y);
         }
         // End multi-threading
@@ -71,8 +76,10 @@ int main(int argc, char *argv[])
     }
     else
     {
-        utilizations = {1};
-        src_file_path = spec_files_dir + to_string(num_blocks) + "_block.ilp";
+        for(int j = 0; j < num_blocks; j++)
+        {
+            utilizations.push_back(1.0f); // Primary blocks are fully used
+        }
     }
 
     // Optimize and plot final floorplan
@@ -82,7 +89,7 @@ int main(int argc, char *argv[])
                                     successive_augmentation,
                                     runtime, result_dir,
                                     utilizations, true);
-    cout << "Utilization: " << 100 * utilization << '%' << endl;
+    cout << "Final utilization: " << 100 * utilization << '%' << endl;
         
     return 0;
 }

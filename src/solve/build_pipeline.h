@@ -17,13 +17,13 @@ bool parseBool(string Bool)
 }
 
 inline tuple<float, float> mainProcess(int num_blocks,
-                                bool underestimation,
-                                bool save_lp,
-                                bool successive_augmentation,
-                                float runtime,
-                                string result_dir,
-                                vector<float> utilizations,
-                                bool final_layout, int i=0)
+                                        bool underestimation,
+                                        bool save_lp,
+                                        bool successive_augmentation,
+                                        float runtime,
+                                        string result_dir,
+                                        vector<float> utilizations,
+                                        bool final_layout, int i=0)
 // Builds the main solver pipeline
 {
     float utilization;
@@ -32,7 +32,9 @@ inline tuple<float, float> mainProcess(int num_blocks,
     if(final_layout)
     {
         cout << "\nFinal Optimization\n";
-        src_file_path = sa_files_dir + to_string(num_blocks) + "_sa.ilp";
+        src_file_path = successive_augmentation ? 
+                        sa_files_dir + to_string(num_blocks) + "_sa.ilp" :
+                        "spec_files/" + to_string(num_blocks) + "_block.ilp";
         output_file_name = result_dir + to_string(num_blocks) + "_sa_" + printBool(successive_augmentation) + ".txt";
         plot_command = "python src/visualize.py -f " + output_file_name + " --glob True --sa " + printBool(successive_augmentation) + " -show True";
     }
@@ -54,8 +56,9 @@ inline tuple<float, float> mainProcess(int num_blocks,
                     problem.hard_module_width,
                     h_i, z_i);
 
-    utilization = problem.export_results(chip_height, chip_width, x_i, y_i, z_i, w_i, h_i,
-                utilizations, output_file_name);
+    utilization = problem.export_results(chip_height, chip_width,
+                                        x_i, y_i, z_i, w_i, h_i,
+                                        utilizations, output_file_name);
     system(plot_command.c_str());
 
     return make_tuple(utilization, Y);
