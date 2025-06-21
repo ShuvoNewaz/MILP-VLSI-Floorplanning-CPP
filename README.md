@@ -58,6 +58,12 @@ The input is a `*.ilp` file that contains
 
 - The allowed aspect ratio of the soft modules.
 
+The input files must be named in the following format:
+
+`${num_blocks}_block.ilp`
+
+To correctly parse the files, they must also be written in a specific format. Please check out files contained in the [spec_files](spec_files) directory for examples.
+
 ### Task
 
 The task is to parse the `*.ilp` file and read the module parameters. The parameters are then used to formulate and solve an MILP problem. Assuming the final floorplan is square-shaped, the MILP problem solves to minimize the final width, $W$, of the chip.
