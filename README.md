@@ -138,3 +138,7 @@ The optimized floorplan of a 5-module system is shown below. This particular sol
 <p align="center">
   <img src="results/5_block_floorplan.png"/>
 </p>
+
+A more comprehensive set of runs can be found on this [YouTube Video](https://www.youtube.com/watch?v=-BrS9rNdCIk). The timestamps in the description explains the parameters and some observations.
+
+Note: The repository owner has renamed `run_template.sh` to `main.sh` locally, which is reflected in the video.
