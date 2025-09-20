@@ -103,87 +103,108 @@ class SolveILP
         tuple<float, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>> solve(float run_time)
         {
             vector<float> x_i, y_i, w_i, h_i, z_i;
-            float Y;           
-            unsigned short int total_variables = 3 * num_total_modules + 2 * NcR(num_total_modules, 2) + 1;
-
-            // Populate the optimization model and variables
-
-            M = new Model("Floorplan_Optimization");
-
-            auto _M = finally([&]() { M->dispose(); });
-
-            X = M->variable(total_variables, Domain::inRange(0, bound));
-            X->slice(2 * num_total_modules, 2 * num_total_modules + num_hard_modules)->makeInteger(); // z_i are binary
-            X->slice(3 * num_total_modules, total_variables - 1)->makeInteger(); // x_ij and y_ij are binary
+            float Y;
+            unsigned short int total_variables;
+            if(num_total_modules > 1)
+            {
+                total_variables = 3 * num_total_modules + 2 * NcR(num_total_modules, 2) + 1;
             
-            create_constraints();
+                // Populate the optimization model and variables
 
-            // Set max solution time
+                M = new Model("Floorplan_Optimization");
 
-            // M->setSolverParam("optimizerMaxTime", run_time);
-            M->setSolverParam("optimizerMaxTime", run_time);
+                auto _M = finally([&]() { M->dispose(); });
 
-            // Set max relative gap (to its default value)
+                X = M->variable(total_variables, Domain::inRange(0, bound));
+                X->slice(2 * num_total_modules, 2 * num_total_modules + num_hard_modules)->makeInteger(); // z_i are binary
+                X->slice(3 * num_total_modules, total_variables - 1)->makeInteger(); // x_ij and y_ij are binary
+                
+                create_constraints();
 
-            M->setSolverParam("mioTolRelGap", 1e-4);
+                // Set max solution time
 
-            // Set max absolute gap (to its default value)
+                // M->setSolverParam("optimizerMaxTime", run_time);
+                M->setSolverParam("optimizerMaxTime", run_time);
 
-            M->setSolverParam("mioTolAbsGap", 0.1);
+                // Set max relative gap (to its default value)
 
-            vector<double> A(total_variables);
-            A[A.size() - 1] = 1; // Set up the objective
-            auto Coefficients = new_array_ptr<double>(A);
-            M->objective("Objective", ObjectiveSense::Minimize, Expr::dot(Coefficients, X));
-            M->writeTask("VLSI.ptf");            
-            M->solve();
+                M->setSolverParam("mioTolRelGap", 1e-4);
 
-            auto solStatus = M->getPrimalSolutionStatus();
-            if (solStatus == SolutionStatus::Optimal)
-            {
-                std::cout << "Optimal solution found.\n";
-                M->acceptedSolutionStatus(AccSolutionStatus::Optimal);
-            }
-            else if (solStatus == SolutionStatus::Feasible)
-            {
-                std::cout << "Feasible solution found within the time limit.\n";
-                M->acceptedSolutionStatus(AccSolutionStatus::Feasible);
+                // Set max absolute gap (to its default value)
+
+                M->setSolverParam("mioTolAbsGap", 0.1);
+
+                vector<double> A(total_variables);
+                A[A.size() - 1] = 1; // Set up the objective
+                auto Coefficients = new_array_ptr<double>(A);
+                M->objective("Objective", ObjectiveSense::Minimize, Expr::dot(Coefficients, X));
+                M->writeTask("VLSI.ptf");            
+                M->solve();
+
+                auto solStatus = M->getPrimalSolutionStatus();
+                if (solStatus == SolutionStatus::Optimal)
+                {
+                    std::cout << "Optimal solution found.\n";
+                    M->acceptedSolutionStatus(AccSolutionStatus::Optimal);
+                }
+                else if (solStatus == SolutionStatus::Feasible)
+                {
+                    std::cout << "Feasible solution found within the time limit.\n";
+                    M->acceptedSolutionStatus(AccSolutionStatus::Feasible);
+                }
+                else
+                {
+                    std::cerr << "No feasible solution found within the time limit.\n";
+                }
+
+                // Get all the parameter values
+                
+                auto sol = X->level();
+                for(int i=0; i < num_total_modules; i++)
+                {
+                    x_i.push_back((*sol)[i]);
+                    y_i.push_back((*sol)[i + num_total_modules]);
+
+                    if(i < num_hard_modules)
+                    {
+                        z_i.push_back((*sol)[i + 2*num_total_modules]);
+                    }
+                    
+                    if(i < num_soft_modules)
+                    {
+                        w_i.push_back((*sol)[i + 2*num_total_modules + num_hard_modules]);
+                        h_i.push_back(gradient[i] * w_i[i] + intercept[i]);
+                    }
+                }
+                
+                Y = (*sol)[total_variables - 1];
+
+                // Shift modules if doesn't start from 0
+                float min_x{Y}, min_y{Y};
+                min_x = *std::min_element(x_i.begin(), x_i.end());
+                min_y = *std::min_element(y_i.begin(), y_i.end());
+                for(size_t i = 0; i < x_i.size(); i++)
+                {
+                    x_i[i] = x_i[i] - min_x;
+                    y_i[i] = y_i[i] - min_y;
+                }
             }
             else
             {
-                std::cerr << "No feasible solution found within the time limit.\n";
-            }
-
-            // Get all the parameter values
-            
-            auto sol = X->level();
-            for(int i=0; i < num_total_modules; i++)
-            {
-                x_i.push_back((*sol)[i]);
-                y_i.push_back((*sol)[i + num_total_modules]);
-
-                if(i < num_hard_modules)
+                x_i.push_back(0);
+                y_i.push_back(0);
+                z_i.push_back(0);
+                if(hard_exists)
                 {
-                    z_i.push_back((*sol)[i + 2*num_total_modules]);
+                    w_i.push_back(hard_module_width[0]);
+                    h_i.push_back(hard_module_height[0]);
                 }
-                
-                if(i < num_soft_modules)
+                else if(soft_exists)
                 {
-                    w_i.push_back((*sol)[i + 2*num_total_modules + num_hard_modules]);
-                    h_i.push_back(gradient[i] * w_i[i] + intercept[i]);
+                    w_i.push_back(soft_module_width_range[0][0]);
+                    h_i.push_back(soft_module_height_range[0][1]);
                 }
-            }
-            
-            Y = (*sol)[total_variables - 1];
-
-            // Shift modules if doesn't start from 0
-            float min_x{Y}, min_y{Y};
-            min_x = *std::min_element(x_i.begin(), x_i.end());
-            min_y = *std::min_element(y_i.begin(), y_i.end());
-            for(size_t i = 0; i < x_i.size(); i++)
-            {
-                x_i[i] = x_i[i] - min_x;
-                y_i[i] = y_i[i] - min_y;
+                Y = std::max(w_i[0], h_i[0]);
             }
 
             return make_tuple(Y, x_i, y_i, z_i, w_i, h_i);

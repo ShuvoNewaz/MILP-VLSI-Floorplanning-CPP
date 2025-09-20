@@ -18,11 +18,11 @@ This will create a conda environment with the required libraries. The environmen
 - The environment is now ready. Activate the environment by typing
 
     `conda activate MILP_Floorplan_CPP`
-- The setup for the MOSEK libraries and header files are dependent on the operating system. For instance, g++ may not be used with Windows to run MOSEK. Please check their website to confirm compatibility. The [run_template.sh](run_template.sh) outlines the template paths for the required header files and libraries.
-- The input arguments such as the number of blocks of the system, whether or not successive augmentation is applied, etc. are very similar to the Python version. Edit the [run_template.sh](run_template.sh) file to run as required.
-- After setting up the arguments as needed, run `bash run_template.sh` in your terminal.
+- The setup for the MOSEK libraries and header files are dependent on the operating system. For instance, g++ may not be used with Windows to run MOSEK. Please check their website to confirm compatibility. The [main.sh](main.sh) outlines the template paths for the required header files and libraries.
+- The input arguments such as the number of blocks of the system, whether or not successive augmentation is applied, etc. are very similar to the Python version. Edit the [main.sh](main.sh) file to run as required.
+- After setting up the arguments as needed, run `bash main.sh` in your terminal.
 
-A trial run can be performed by modifying the `bash run_template.sh` as follows:
+A trial run can be performed by modifying the `main.sh` as follows:
 
   `./main.out 30 true true 15 true 7 true`
 
@@ -140,5 +140,3 @@ The optimized floorplan of a 5-module system is shown below. This particular sol
 </p>
 
 A more comprehensive set of runs can be found on this [YouTube Video](https://www.youtube.com/watch?v=-BrS9rNdCIk). The timestamps in the description explains the parameters and some observations.
-
-Note: The repository owner has renamed `run_template.sh` to `main.sh` locally, which is reflected in the video.
